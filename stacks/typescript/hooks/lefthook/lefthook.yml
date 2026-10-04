@@ -1,0 +1,21 @@
+pre-commit:
+  piped: true
+  jobs:
+    - name: format
+      glob: '*.{ts,js,mjs,cjs,json,md,yml,yaml}'
+      run: pnpm prettier --write {staged_files}
+      stage_fixed: true
+    - name: lint
+      glob: '*.{ts,js,mjs,cjs}'
+      run: pnpm eslint --fix {staged_files}
+      stage_fixed: true
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: pnpm commitlint --edit {1}
+
+pre-push:
+  jobs:
+    - name: verify
+      run: pnpm verify

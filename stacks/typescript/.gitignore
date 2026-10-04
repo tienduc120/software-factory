@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.profiles/
+*.cpuprofile
+*.heapprofile
+*.heapsnapshot

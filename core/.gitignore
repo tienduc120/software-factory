@@ -1,0 +1,12 @@
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.log
+.env
+.env.*
+!.env.example
+.claude/settings.local.json
+CLAUDE.local.md
