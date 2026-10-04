@@ -1,0 +1,16 @@
+# Owners are asked to review every pull request. The rules that judge code are listed
+# separately so they keep an owner when the catch-all line is split up per team.
+*                    @OWNER
+
+/.github/            @OWNER
+/.agents/            @OWNER
+/.claude/            @OWNER
+/standards/          @OWNER
+/eslint-rules/       @OWNER
+/eslint.config.mjs   @OWNER
+/tsconfig*.json      @OWNER
+/vitest.config.ts    @OWNER
+/lefthook.yml        @OWNER
+/.husky/             @OWNER
+/AGENTS.md           @OWNER
+/CLAUDE.md           @OWNER

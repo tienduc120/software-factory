@@ -1,5 +1,14 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
@@ -50,6 +59,18 @@ describe('install into an empty directory', () => {
       'docs/runbooks/README.md',
       'docs/runbooks/database.md',
       'docs/runbooks/node-profiling.md',
+      'standards/ci.md',
+      '.agents/guards/guard.mjs',
+      '.agents/skills/ship-issue/SKILL.md',
+      '.claude/skills/ship-issue/SKILL.md',
+      '.claude/agents/reviewer.md',
+      '.claude/settings.json',
+      '.github/workflows/ci.yml',
+      '.github/workflows/pr-title.yml',
+      '.github/workflows/ai-review.yml',
+      '.github/workflows/claude.yml',
+      '.github/workflows/babysit.yml',
+      '.github/dependabot.yml',
       'eslint.config.mjs',
       'eslint-rules/architecture.mjs',
       '.vscode/settings.json',
@@ -125,6 +146,59 @@ describe('install into an empty directory', () => {
       factoryVersion: factoryJson('package.json').version,
       stack: 'typescript',
       hooks: 'lefthook',
+    });
+  });
+});
+
+describe('agent skills', () => {
+  it('copies every skill to .claude/skills unchanged, so every agent reads the same steps', () => {
+    install({ target, stack: 'typescript', owner: 'octocat' });
+    const skills = readdirSync(join(FACTORY_ROOT, 'core/.agents/skills'));
+
+    assert.deepStrictEqual(
+      skills.map((skill) => read(`.claude/skills/${skill}/SKILL.md`)),
+      skills.map((skill) => readFactory(`core/.agents/skills/${skill}/SKILL.md`)),
+    );
+  });
+});
+
+describe('CODEOWNERS', () => {
+  const CODEOWNERS = '.github/CODEOWNERS';
+
+  it('names the given owner', () => {
+    const result = install({ target, stack: 'typescript', owner: '@octocat' });
+
+    assert.deepStrictEqual(
+      { owner: result.owner, content: read(CODEOWNERS) },
+      {
+        owner: 'octocat',
+        content: readFactory(`core/${CODEOWNERS}`).replaceAll('@OWNER', '@octocat'),
+      },
+    );
+  });
+
+  it('reads the owner from a GitHub origin remote', () => {
+    spawnSync('git', ['init', '-q'], { cwd: target });
+    spawnSync('git', ['remote', 'add', 'origin', 'git@github.com:acme/shop.git'], { cwd: target });
+
+    const result = install({ target, stack: 'typescript' });
+
+    assert.strictEqual(result.owner, 'acme');
+  });
+
+  it('skips CODEOWNERS rather than ship a placeholder when the owner is unknown', () => {
+    const result = install({ target, stack: 'typescript' });
+
+    assert.deepStrictEqual(
+      { needsOwner: result.needsOwner, exists: existsSync(join(target, CODEOWNERS)) },
+      { needsOwner: [CODEOWNERS], exists: false },
+    );
+  });
+
+  it('rejects an owner GitHub would not accept', () => {
+    assert.throws(() => install({ target, stack: 'typescript', owner: 'not a user' }), {
+      message:
+        'Invalid owner "not a user". Use a GitHub user or org/team, e.g. octocat or acme/platform.',
     });
   });
 });

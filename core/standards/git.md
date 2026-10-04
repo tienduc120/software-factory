@@ -24,6 +24,7 @@
 - The body follows `.github/pull_request_template.md`: Why, What changed, Design (a Mermaid diagram), Not in this PR, Evidence, Review focus, Risk and rollback, Decisions, References.
 - The description lists every change, including any that look like rebase or cleanup noise, and what changed since the previous review round.
 - Merge method is squash only, so `main` has linear history.
+- Required checks: `ci-passed`, `pr-title`, and `ai-review` (`standards/ci.md`). A human merges; agents never do.
 - When behind `main`, rebase. Don't merge `main` into the branch.
 - Force-push only to your own branch, and only with `--force-with-lease`.
 - Open as draft while work is in progress. Mark ready only when the definition of done in AGENTS.md is met.

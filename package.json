@@ -1,6 +1,6 @@
 {
   "name": "software-factory",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Coding standards, agent instructions, and PR gates installed into every project.",
   "license": "MIT",
@@ -12,10 +12,14 @@
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "smoke": "node scripts/smoke.mjs",
+    "lint:workflows": "node scripts/lint-workflows.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "verify": "pnpm format:check && pnpm test"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
     "prettier": "^3.9.9"
   }
 }

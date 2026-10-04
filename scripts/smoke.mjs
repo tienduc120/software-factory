@@ -1,6 +1,6 @@
 // End-to-end proof that an installed project's gates work. Needs network for pnpm install.
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { install } from './lib/installer.mjs';
@@ -166,6 +166,16 @@ const LINT_PROBES = [
   },
 ];
 
+// Each command goes through the hook exactly as installed in .claude/settings.json.
+const GUARD_PROBES = [
+  { command: 'git commit --no-verify -m "chore: skip hooks"', isBlocked: true },
+  { command: 'git push origin main', isBlocked: true },
+  { command: 'gh pr merge 1 --squash', isBlocked: true },
+  { command: 'gh pr comment 1 --body "LGTM"', isBlocked: true },
+  { command: 'psql -c "DROP TABLE orders"', isBlocked: true },
+  { command: 'pnpm verify', isBlocked: false },
+];
+
 function run(project, command, input, env = {}) {
   // shell: true resolves pnpm.cmd on Windows.
   const res = spawnSync(command, {
@@ -239,6 +249,36 @@ function smoke(hooks) {
     `${COMMIT} -m "chore: initial commit"`,
     true,
   );
+
+  const settings = JSON.parse(readFileSync(join(project, '.claude/settings.json'), 'utf8'));
+  const [guardHook] = settings.hooks.PreToolUse[0].hooks;
+  const guardArgs = guardHook.args.map((arg) => arg.replace('${CLAUDE_PROJECT_DIR}', project));
+  for (const { command, isBlocked } of GUARD_PROBES) {
+    const result = spawnSync(guardHook.command, guardArgs, {
+      input: JSON.stringify({ tool_name: 'Bash', tool_input: { command }, cwd: project }),
+      encoding: 'utf8',
+      env: { ...process.env, GITHUB_ACTIONS: '' },
+    });
+    report(
+      `Claude guard hook ${isBlocked ? 'blocks' : 'allows'}: ${command}`,
+      result.status === (isBlocked ? 2 : 0),
+      `${result.stdout}${result.stderr}`,
+    );
+  }
+
+  const remote = mkdtempSync(join(tmpdir(), `factory-remote-${hooks}-`));
+  run(remote, 'git init -q --bare');
+  run(project, `git remote add origin "${remote}"`);
+  // Seeding the empty remote is the harness's job, not what's under test.
+  run(project, 'git push -q --no-verify origin HEAD:main');
+  run(project, `${COMMIT} --allow-empty -m "chore: second commit"`);
+  const push = run(project, 'git push origin HEAD:main');
+  report(
+    'pre-push hook rejects a push to main',
+    !push.ok && push.output.includes('Pushing to main is not allowed'),
+    push.output,
+  );
+  rmSync(remote, { recursive: true, force: true });
 
   for (const { rule, file, source } of LINT_PROBES) {
     withFile(project, file, source, () => {

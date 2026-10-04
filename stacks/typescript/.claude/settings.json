@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(pnpm verify)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm lint:fix)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm test)",
+      "Bash(pnpm test *)",
+      "Bash(pnpm test:coverage)",
+      "Bash(pnpm format)",
+      "Bash(pnpm format:check)",
+      "Bash(pnpm build)",
+      "Bash(pnpm eslint *)",
+      "Bash(pnpm vitest *)",
+      "Bash(pnpm prettier *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git branch --show-current)",
+      "Bash(gh issue view *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr diff *)",
+      "Bash(gh pr checks *)",
+      "Bash(gh run view *)",
+      "PowerShell(pnpm verify)",
+      "PowerShell(pnpm lint)",
+      "PowerShell(pnpm lint:fix)",
+      "PowerShell(pnpm typecheck)",
+      "PowerShell(pnpm test)",
+      "PowerShell(pnpm test *)",
+      "PowerShell(pnpm test:coverage)",
+      "PowerShell(pnpm format)",
+      "PowerShell(pnpm format:check)",
+      "PowerShell(pnpm build)",
+      "PowerShell(pnpm eslint *)",
+      "PowerShell(pnpm vitest *)",
+      "PowerShell(pnpm prettier *)",
+      "PowerShell(git status *)",
+      "PowerShell(git diff *)",
+      "PowerShell(git log *)",
+      "PowerShell(git show *)",
+      "PowerShell(git branch --show-current)",
+      "PowerShell(gh issue view *)",
+      "PowerShell(gh pr view *)",
+      "PowerShell(gh pr diff *)",
+      "PowerShell(gh pr checks *)",
+      "PowerShell(gh run view *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PROJECT_DIR}/.agents/guards/guard.mjs", "claude-hook"],
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

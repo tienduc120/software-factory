@@ -16,6 +16,10 @@ commit-msg:
       run: pnpm commitlint --edit {1}
 
 pre-push:
+  piped: true
   jobs:
+    - name: protect-main
+      run: node .agents/guards/guard.mjs pre-push
+      use_stdin: true
     - name: verify
       run: pnpm verify

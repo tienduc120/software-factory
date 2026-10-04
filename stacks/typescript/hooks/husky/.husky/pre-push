@@ -1,1 +1,2 @@
+node .agents/guards/guard.mjs pre-push
 pnpm verify

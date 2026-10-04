@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 
@@ -5,6 +6,11 @@ export const FACTORY_ROOT = resolve(import.meta.dirname, '..', '..');
 
 const LINE_MERGED = new Set(['.gitignore', '.gitattributes']);
 const DEP_FIELDS = ['dependencies', 'devDependencies'];
+// Codex and other agents read `.agents/skills/`; Claude Code reads only `.claude/skills/`.
+const SKILL_SOURCE = '.agents/skills/';
+const SKILL_MIRRORS = ['.claude/skills/'];
+const OWNER_PLACEHOLDER = '@OWNER';
+const OWNER_FORMAT = /^[A-Za-z0-9-]+(\/[A-Za-z0-9._-]+)?$/;
 
 export function listStacks() {
   return readdirSync(join(FACTORY_ROOT, 'stacks'), { withFileTypes: true })
@@ -76,7 +82,31 @@ function planFiles(stack, hooks, includeStarter) {
       plan.set(rel, previous === undefined ? content : combineLayers(rel, previous, content));
     }
   }
+  for (const [rel, content] of [...plan]) {
+    if (!rel.startsWith(SKILL_SOURCE)) continue;
+    for (const mirror of SKILL_MIRRORS) plan.set(mirror + rel.slice(SKILL_SOURCE.length), content);
+  }
   return plan;
+}
+
+/** Reads the owner from a GitHub `origin` remote, so CODEOWNERS can be filled in without asking. */
+export function detectOwner(targetDir) {
+  const remote = spawnSync('git', ['remote', 'get-url', 'origin'], {
+    cwd: targetDir,
+    encoding: 'utf8',
+  });
+  return /github\.com[:/]([^/]+)\//.exec(remote.stdout ?? '')?.[1];
+}
+
+function normalizeOwner(owner) {
+  if (owner === undefined) return undefined;
+  const name = owner.replace(/^@/, '');
+  if (!OWNER_FORMAT.test(name)) {
+    throw new Error(
+      `Invalid owner "${owner}". Use a GitHub user or org/team, e.g. octocat or acme/platform.`,
+    );
+  }
+  return name;
 }
 
 export function listHooks(stack) {
@@ -96,7 +126,7 @@ export function detectHooks(targetDir) {
   return pkg.devDependencies?.husky || pkg.dependencies?.husky ? 'husky' : 'lefthook';
 }
 
-export function install({ target, stack, hooks, force = false }) {
+export function install({ target, stack, hooks, owner, force = false }) {
   if (!listStacks().includes(stack)) {
     throw new Error(`Unknown stack "${stack}". Available: ${listStacks().join(', ')}`);
   }
@@ -105,19 +135,29 @@ export function install({ target, stack, hooks, force = false }) {
   if (!listHooks(stack).includes(hookRunner)) {
     throw new Error(`Unknown hooks "${hookRunner}". Available: ${listHooks(stack).join(', ')}`);
   }
+  const explicitOwner = normalizeOwner(owner);
   mkdirSync(targetDir, { recursive: true });
+  const ownerName = explicitOwner ?? detectOwner(targetDir);
 
   const result = {
     hooks: hookRunner,
+    owner: ownerName,
     created: [],
     merged: [],
     overwritten: [],
     skipped: [],
+    needsOwner: [],
     conflicts: [],
   };
   const plan = planFiles(stack, hookRunner, !existsSync(join(targetDir, 'src')));
 
-  for (const [rel, content] of plan) {
+  for (const [rel, template] of plan) {
+    // A placeholder owner would make GitHub reject the whole CODEOWNERS file, so skip it instead.
+    if (template.includes(OWNER_PLACEHOLDER) && ownerName === undefined) {
+      result.needsOwner.push(rel);
+      continue;
+    }
+    const content = template.replaceAll(OWNER_PLACEHOLDER, `@${ownerName}`);
     const dest = join(targetDir, rel);
     mkdirSync(dirname(dest), { recursive: true });
 

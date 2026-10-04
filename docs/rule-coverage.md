@@ -1,6 +1,6 @@
 # Rule coverage
 
-Every rule from the imported rule set and the owner's own list, where it now lives, and what enforces it. **lint**, **types**, and **coverage** fail `pnpm verify`; `pnpm smoke` proves each lint rule fires. **review** means the review rubric checks it. **phase N** means it arrives with that phase ([roadmap](roadmap.md)).
+Every rule from the imported rule set and the owner's own list, where it now lives, and what enforces it. **lint**, **types**, and **coverage** fail `pnpm verify`; `pnpm smoke` proves each lint rule fires. **review** means the review rubric checks it, by a human and by the required `ai-review` check. **guard** means `.agents/guards/guard.mjs` blocks it before it runs. **roadmap** means it is scheduled in [roadmap.md](roadmap.md).
 
 ## Code
 
@@ -22,7 +22,7 @@ Every rule from the imported rule set and the owner's own list, where it now liv
 | DI with decorators, explicit tokens                                                           | stack, starter            | smoke (tsc, tsx, Vitest)                       |
 | No obvious comments; no URLs in comments                                                      | conventions               | review                                         |
 | Constants for paths, URLs, limits; reuse before adding                                        | conventions               | review                                         |
-| Env vars in every environment; test env in one place; no real values in CI                    | conventions               | review, phase 2                                |
+| Env vars in every environment; test env in one place; no real values in CI                    | conventions               | review; parity check in the roadmap            |
 | No `console`; structured logger                                                               | conventions               | lint                                           |
 
 ## Architecture
@@ -55,13 +55,13 @@ Every rule from the imported rule set and the owner's own list, where it now liv
 
 ## Database
 
-| Rule                                                                     | Where    | Enforced by                        |
-| ------------------------------------------------------------------------ | -------- | ---------------------------------- |
-| Audit columns `_timestamp`, business dates `_at`                         | database | review                             |
-| No `SELECT *`; `WHERE` on every `UPDATE`/`DELETE`                        | database | review, phase 3 (agent guard hook) |
-| Aliases on multi-table queries; `tenant_id` filter first; escaped `LIKE` | database | review                             |
-| Query names `create`/`get`/`list`/`update`/`delete`                      | database | review                             |
-| Migrations only, backward compatible                                     | database | review                             |
+| Rule                                                                     | Where    | Enforced by                     |
+| ------------------------------------------------------------------------ | -------- | ------------------------------- |
+| Audit columns `_timestamp`, business dates `_at`                         | database | review                          |
+| No `SELECT *`; `WHERE` on every `UPDATE`/`DELETE`                        | database | review + guard (agent commands) |
+| Aliases on multi-table queries; `tenant_id` filter first; escaped `LIKE` | database | review                          |
+| Query names `create`/`get`/`list`/`update`/`delete`                      | database | review                          |
+| Migrations only, backward compatible                                     | database | review                          |
 
 ## Tests
 
@@ -92,7 +92,7 @@ Every rule from the imported rule set and the owner's own list, where it now liv
 
 | Rule                                                                           | Where                              | Enforced by                       |
 | ------------------------------------------------------------------------------ | ---------------------------------- | --------------------------------- |
-| SLOs, error budgets, symptom-based alerts                                      | observability, runbooks            | review, phase 4 (alerts as code)  |
+| SLOs, error budgets, symptom-based alerts                                      | observability, runbooks            | review; alerts as code in roadmap |
 | Structured logs with trace and request ids; access log per request             | observability, starter logger      | review                            |
 | Runtime and host metrics (CPU, memory, event loop, GC)                         | observability, starter telemetry   | smoke (telemetry starts)          |
 | Health endpoints, graceful shutdown, timeouts, bounded pools, rate limits      | observability                      | review, service starter (roadmap) |
@@ -101,16 +101,21 @@ Every rule from the imported rule set and the owner's own list, where it now liv
 
 ## Process
 
-| Rule                                                                       | Where                  | Enforced by                                  |
-| -------------------------------------------------------------------------- | ---------------------- | -------------------------------------------- |
-| Conventional Commits with scope; summary under 72 characters               | git                    | hook (commitlint) + phase 2 (PR title check) |
-| Never `--no-verify`; never push to `main`                                  | AGENTS.md, git         | phase 2 (branch rules)                       |
-| PR template with design diagram and evidence                               | git, PR template       | template + review                            |
-| Trunk-based branches, hotfix branches, release tags                        | git                    | review                                       |
-| Spec first for features (EARS requirements, design, tasks, approvals)      | workflow               | review, phase 3 (skill)                      |
-| ADRs with options, Y-statement, consequences, status history               | workflow, ADR template | review                                       |
-| Review severities (must/want/nits) and finding rules                       | review-rubric          | phase 4 (AI reviewer)                        |
-| Agents can't post PR comments from local sessions; destructive SQL blocked | roadmap                | phase 3                                      |
+| Rule                                                                       | Where                  | Enforced by                                   |
+| -------------------------------------------------------------------------- | ---------------------- | --------------------------------------------- |
+| Conventional Commits with scope; summary under 72 characters               | git                    | hook (commitlint) + CI (`pr-title`, required) |
+| Never `--no-verify`; never push to `main`                                  | AGENTS.md, git         | guard + pre-push hook + ruleset               |
+| PR template with design diagram and evidence                               | git, PR template       | template + review                             |
+| Trunk-based branches, hotfix branches, release tags                        | git                    | review                                        |
+| Spec first for features (EARS requirements, design, tasks, approvals)      | workflow               | review + `ship-issue` skill                   |
+| ADRs with options, Y-statement, consequences, status history               | workflow, ADR template | review                                        |
+| Review severities (must/want/nits) and finding rules                       | review-rubric          | `ai-review` required check                    |
+| Agents can't post PR comments from local sessions; destructive SQL blocked | AGENTS.md              | guard                                         |
+| Agents never merge; a human merges after the required checks pass          | AGENTS.md, ci          | guard + ruleset                               |
+| Required checks `ci-passed`, `pr-title`, `ai-review`; squash only          | ci                     | ruleset (`setup-github`)                      |
+| Workflows: least permissions, timeouts, SHA pins, untrusted input via env  | ci                     | actionlint in the factory's CI + review       |
+| Agent kill switch, turn limits, timeouts, babysit attempt cap              | ci                     | agent workflows                               |
+| Skills identical for every agent                                           | AGENTS.md              | CI (`diff -r`)                                |
 
 ## Not adopted
 
