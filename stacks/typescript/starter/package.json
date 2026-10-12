@@ -4,11 +4,11 @@
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.1",
-    "@opentelemetry/exporter-metrics-otlp-http": "^0.222.0",
-    "@opentelemetry/exporter-trace-otlp-http": "^0.222.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.223.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.223.0",
     "@opentelemetry/host-metrics": "^0.39.0",
-    "@opentelemetry/instrumentation-runtime-node": "^0.35.0",
-    "@opentelemetry/sdk-node": "^0.222.0",
+    "@opentelemetry/instrumentation-runtime-node": "^0.36.0",
+    "@opentelemetry/sdk-node": "^0.223.0",
     "pino": "^10.4.0"
   }
 }
