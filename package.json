@@ -18,8 +18,8 @@
     "verify": "pnpm format:check && pnpm test"
   },
   "devDependencies": {
-    "@commitlint/cli": "^21.2.3",
-    "@commitlint/config-conventional": "^21.2.3",
-    "prettier": "^3.9.9"
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "prettier": "^3.9.10"
   }
 }
